@@ -2,8 +2,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:kiliride/components/circle_button.wdg.dart';
 import 'package:kiliride/components/custom_avatr_comp.dart';
 import 'package:kiliride/components/custom_info_tile.dart';
+import 'package:kiliride/screens/rider/screens/cancel_ride_reason.scrn.dart';
+import 'package:kiliride/screens/rider/screens/split_fare.scrn.dart';
+import 'package:kiliride/components/safety_toolkit_bottom_sheet.dart';
+import 'package:kiliride/shared/funcs.main.ctrl.dart';
 import 'package:kiliride/shared/styles.shared.dart';
 
 class DriverArrivingPage extends StatefulWidget {
@@ -128,15 +133,57 @@ class _DriverArrivingPageState extends State<DriverArrivingPage> {
     );
 
     setState(() {});
+
+    // Fit map bounds after drawing route
+    Future.delayed(const Duration(milliseconds: 300), _fitMapBounds);
+  }
+
+  void _fitMapBounds() {
+    if (_mapController == null || _markers.length < 2) return;
+
+    final bounds = LatLngBounds(
+      southwest: LatLng(
+        _markers
+            .map((m) => m.position.latitude)
+            .reduce((a, b) => a < b ? a : b),
+        _markers
+            .map((m) => m.position.longitude)
+            .reduce((a, b) => a < b ? a : b),
+      ),
+      northeast: LatLng(
+        _markers
+            .map((m) => m.position.latitude)
+            .reduce((a, b) => a > b ? a : b),
+        _markers
+            .map((m) => m.position.longitude)
+            .reduce((a, b) => a > b ? a : b),
+      ),
+    );
+
+    // Fit bounds - padding is handled by GoogleMap widget
+    _mapController!.animateCamera(
+      CameraUpdate.newLatLngBounds(
+        bounds,
+        50, // Edge padding around bounds
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final topPadding = MediaQuery.of(context).padding.top + 60; // Safety button area
+    final bottomPadding = screenHeight * 0.55; // Bottom sheet initial size
+
     return Scaffold(
       body: Stack(
         children: [
           // Map
           GoogleMap(
+            padding: EdgeInsets.only(
+              top: topPadding,
+              bottom: bottomPadding,
+            ),
             initialCameraPosition: CameraPosition(
               target: LatLng(widget.pickupLat, widget.pickupLng),
               zoom: 14,
@@ -185,33 +232,38 @@ class _DriverArrivingPageState extends State<DriverArrivingPage> {
           Positioned(
             top: MediaQuery.of(context).padding.top + AppStyle.appPaddingMd,
             left: 16,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.shield_outlined,
-                    size: 18,
-                    color: Colors.grey[700],
-                  ),
-                  const SizedBox(width: 4),
-                  const Text(
-                    'Safety',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                  ),
-                ],
+            child: GestureDetector(
+              onTap: () {
+                SafetyToolkitBottomSheet.show(context);
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.shield_outlined,
+                      size: 18,
+                      color: Colors.grey[700],
+                    ),
+                    const SizedBox(width: 4),
+                    const Text(
+                      'Safety',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -306,7 +358,7 @@ class _DriverArrivingPageState extends State<DriverArrivingPage> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 20),
+                              const SizedBox(height: AppStyle.appGap),
 
                               // Vehicle image and details
                               Row(
@@ -343,7 +395,7 @@ class _DriverArrivingPageState extends State<DriverArrivingPage> {
                                 ],
                               ),
                               // Divider(color: AppStyle.dividerColor(context),),
-                              const SizedBox(height: AppStyle.appGap),
+                              // const SizedBox(height: AppStyle.appGap),
 
                               // Driver info
                               Container(
@@ -461,36 +513,35 @@ class _DriverArrivingPageState extends State<DriverArrivingPage> {
 
                                     Row(
                                       children: [
-                                        IconButton(
-                                          onPressed: () {
-                                            // Call driver
-                                          },
-                                          icon: SvgPicture.asset(
-                                            'assets/icons/call.svg',
-                                            height: 30,
+                                        CircleButtonWDG(
+                                          size: 50,
+                                          solidColor: Color.fromRGBO(
+                                            226,
+                                            226,
+                                            226,
+                                            1,
                                           ),
-                                          padding: EdgeInsets.all(
-                                            AppStyle.appGap,
+                                          color: Colors.black,
+                                          iconSrc: 'assets/icons/call.svg', onTap: () async {
+                                          // Call driver
+                                         await Funcs().makePhoneCall('+255754123456');
+                                        },),
+                                        const SizedBox(width: AppStyle.appGap),
+
+                                        CircleButtonWDG(
+                                          size: 50,
+                                          solidColor: Color.fromRGBO(
+                                            226,
+                                            226,
+                                            226,
+                                            1,
                                           ),
-                                          style: IconButton.styleFrom(
-                                            backgroundColor: Colors.grey[200],
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        IconButton(
-                                          onPressed: () {
+                                          color: Colors.black,
+                                          iconSrc: 'assets/icons/message.svg',
+                                          onTap: ()  {
                                             // Message driver
+                                              Funcs().sendSMS(phoneNumber: '+255754123456', message: "Hello, I am your rider.");
                                           },
-                                          icon: SvgPicture.asset(
-                                            'assets/icons/message.svg',
-                                            height: 30,
-                                          ),
-                                          padding: EdgeInsets.all(
-                                            AppStyle.appGap,
-                                          ),
-                                          style: IconButton.styleFrom(
-                                            backgroundColor: Colors.grey[200],
-                                          ),
                                         ),
                                       ],
                                     ),
@@ -498,8 +549,8 @@ class _DriverArrivingPageState extends State<DriverArrivingPage> {
                                 ),
                               ),
 
-                                                            Divider(color: AppStyle.dividerColor(context)),
-                              const SizedBox(height: 20),
+                              Divider(color: AppStyle.dividerColor(context)),
+                              const SizedBox(height: AppStyle.appPadding),
 
                               // Verification code
                               Container(
@@ -551,7 +602,7 @@ class _DriverArrivingPageState extends State<DriverArrivingPage> {
                               ),
                             const SizedBox(height: AppStyle.appPadding,),
                             Divider(color: AppStyle.dividerColor(context)),
-                              const SizedBox(height: 20),
+                              const SizedBox(height: AppStyle.appPadding),
 
                               // Trip details
                               const Text(
@@ -752,37 +803,43 @@ class _DriverArrivingPageState extends State<DriverArrivingPage> {
                               Row(
                                 children: [
                                   Expanded(
-                                    child: OutlinedButton(
-                                      onPressed: () {
-                                        // Split fare with friends
-                                      },
-                                      style: OutlinedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 12,
-                                        ),
-                                        side: BorderSide(
-                                          color: Colors.grey[300]!,
-                                        ),
-                                      ),
-                                      child: const Text(
-                                        'Split fare with your friends',
-                                        style: TextStyle(color: Colors.black),
-                                      ),
+                                    child: Text(
+                                      'Split fare with your friends',
+                                      style: TextStyle(color: Colors.black),
                                     ),
                                   ),
                                   const SizedBox(width: 12),
                                   OutlinedButton(
-                                    onPressed: () {
-                                      // Split fare
+                                    onPressed: () async {
+                                      // Navigate to split fare screen
+                                      final selectedContacts = await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => SplitFareScreen(
+                                            totalPrice: widget.totalPrice,
+                                          ),
+                                        ),
+                                      );
+
+                                      // Handle selected contacts
+                                      if (selectedContacts != null && selectedContacts.isNotEmpty) {
+                                        // TODO: Implement split fare logic with selected contacts
+                                        Funcs.showSnackBar(
+                                          message: "Split fare with ${selectedContacts.length} contact(s)",
+                                          isSuccess: true,
+                                        );
+                                      }
                                     },
-                                    style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 24,
-                                        vertical: 12,
+                                    style: AppStyle.outlinedButtonStyle(context).copyWith(
+                                      shape: WidgetStatePropertyAll(
+                                        RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(AppStyle.appRadius),
+                                        ),
                                       ),
-                                      side: BorderSide(
-                                        color: Colors.grey[300]!,
-                                      ),
+                                      side: WidgetStatePropertyAll(
+                                        BorderSide(
+                                          color: AppStyle.borderColor2(context),
+                                        ),)
                                     ),
                                     child: const Text(
                                       'Split Fare',
@@ -814,8 +871,9 @@ class _DriverArrivingPageState extends State<DriverArrivingPage> {
                               _buildMoreOption(
                                 icon: 'assets/icons/contact_driver.svg',
                                 title: 'Contact Driver',
-                                onTap: () {
+                                onTap: () async{
                                   // Contact driver
+                                  await Funcs().makePhoneCall('+255754123456');
                                 },
                               ),
                               const SizedBox(height: 8),
@@ -823,7 +881,8 @@ class _DriverArrivingPageState extends State<DriverArrivingPage> {
                                 icon: "assets/icons/cancel_ride.svg",
                                 title: 'Cancel ride',
                                 onTap: () {
-                                  _showCancelDialog();
+                                  _navigateToCancelReasonScreen(context);
+                                  // _showCancelDialog();
                                 },
                               ),
                               SizedBox(
@@ -852,7 +911,7 @@ class _DriverArrivingPageState extends State<DriverArrivingPage> {
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         // decoration: BoxDecoration(
         //   color: Colors.white,
         //   borderRadius: BorderRadius.circular(8),
@@ -899,5 +958,23 @@ class _DriverArrivingPageState extends State<DriverArrivingPage> {
         ],
       ),
     );
+  }
+
+    /// Navigates to the screen where the user can select a cancellation reason.
+  Future<void> _navigateToCancelReasonScreen(BuildContext context) async {
+    // Navigate to the new screen and wait for a result.
+    final String? reason = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const CancelRideReasonScreen()),
+    );
+
+    // If a reason was provided (i.e., the user didn't just go back),
+    // proceed with the cancellation.
+    if (reason != null && reason.isNotEmpty) {
+      await _cancelRide(reason);
+    }
+  }
+
+    Future<void> _cancelRide(String reason) async {
   }
 }

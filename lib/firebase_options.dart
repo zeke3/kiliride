@@ -52,7 +52,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyBUZOD6329Gh11rzx96X_uoGufafK0G4tI',
-    appId: '1:129362309764:android:e782adadd45a72a794c8d1',
+    appId: '1:129362309764:android:24e1578fb83b955294c8d1',
     messagingSenderId: '129362309764',
     projectId: 'kiliride',
     storageBucket: 'kiliride.firebasestorage.app',
@@ -60,11 +60,11 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyBs5IZP9tw7T4aihrBgTSWqwBUguhcp_SU',
-    appId: '1:129362309764:ios:4c3718719a72b23694c8d1',
+    appId: '1:129362309764:ios:c5476d982abecd0194c8d1',
     messagingSenderId: '129362309764',
     projectId: 'kiliride',
     storageBucket: 'kiliride.firebasestorage.app',
-    iosBundleId: 'com.example.kiliride',
+    iosBundleId: 'com.kiliride.kiliride',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -85,4 +85,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'kiliride.firebasestorage.app',
     measurementId: 'G-8390EV4MJP',
   );
+
 }

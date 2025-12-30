@@ -97,7 +97,7 @@ class AppStyle {
 
   static Color textPrimaryColor(BuildContext context) =>
       Theme.of(context).brightness == Brightness.light
-      ? const Color.fromRGBO(0, 150, 90, 1.0) // Light theme
+      ? const Color.fromRGBO(0, 0, 0, 1.0) // Light theme
       : const Color.fromRGBO(255, 255, 255, 1); // Dark theme
 
   static Color primaryColor2(BuildContext context) =>
@@ -545,9 +545,9 @@ class AppStyle {
     return ThemeData(
       appBarTheme: const AppBarTheme(elevation: 0),
       useMaterial3: true,
-      fontFamily: "Urbanist",
+      fontFamily: "Gilroy",
       fontFamilyFallback: const <String>[
-        "Urbanist",
+        "Gilroy",
         "EmojiFont",
       ], // Fallback fonts
       brightness: Brightness.light,
@@ -612,14 +612,14 @@ class AppStyle {
 
   static ThemeData getDarkTheme({required BuildContext context}) {
     return ThemeData(
-      textTheme: ThemeData.dark().textTheme.apply(fontFamily: 'Urbanist'),
+      textTheme: ThemeData.dark().textTheme.apply(fontFamily: 'Gilroy'),
       primaryTextTheme: ThemeData.dark().textTheme.apply(
-        fontFamily: 'Urbanist',
+        fontFamily: 'Gilroy',
       ),
       useMaterial3: true,
-      fontFamily: "Urbanist", // Set your custom font family here
+      fontFamily: "Gilroy", // Set your custom font family here
       fontFamilyFallback: const <String>[
-        "Urbanist",
+        "Gilroy",
         "EmojiFont",
       ], // Fallback fonts
       brightness: Brightness.dark,

@@ -480,17 +480,19 @@ String formatNumber(num number) {
     return imageUrl;
   }
 
-  Future<void> makePhoneCall(String phoneNumber) async {
-    final Uri launchUri = Uri(scheme: 'tel', host: phoneNumber);
+  Future<bool> makePhoneCall(String phoneNumber) async {
+    final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
     try {
       if (await canLaunchUrl(launchUri)) {
-        // print("LAUNCH URI: $launchUri");
         await launchUrl(launchUri);
+        return true;
       } else {
-        throw Exception('Could not launch phone service');
+        print('Could not launch phone service - not available on this device');
+        return false;
       }
     } catch (e) {
-      print('Could not launch phone service $e');
+      print('Could not launch phone service: $e');
+      return false;
     }
   }
 

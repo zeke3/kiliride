@@ -63,7 +63,7 @@
 	<true/>
 
 	<key>GoogleMapsAPIKey</key>
-	<string>AIzaSyCsVO5qwfCK2n5c76Zeqlp5WdUSIy3MfsQ</string>
+	<string>AIzaSyACtAwY63eHXw7kG5zjEGbb7GLQXMSZ0ec</string>
 
 	<!-- Location Permissions -->
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>

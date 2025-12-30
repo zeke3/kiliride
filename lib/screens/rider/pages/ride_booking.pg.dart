@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
+import 'package:kiliride/components/loading.dart';
 import 'package:kiliride/components/place_search_field.dart';
 import 'package:kiliride/screens/rider/pages/driver_arriving.pg.dart';
 import 'package:kiliride/shared/constants.dart';
@@ -104,16 +105,25 @@ class _RideBookingPageState extends State<RideBookingPage> {
     super.dispose();
   }
 
-  void _onSheetSizeChanged() {
+void _onSheetSizeChanged() {
+    if (!mounted) return;
     final newSize = _sheetController.size;
     if ((newSize - _currentSheetSize).abs() > 0.01) {
+      final oldSize = _currentSheetSize;
       setState(() {
         _currentSheetSize = newSize;
       });
-      // Delay to ensure the map padding is updated first
-      Future.delayed(const Duration(milliseconds: 100), () {
-        _refitMapWithPadding();
-      });
+      if (newSize <= 0.6) {
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted) {
+            if ((newSize - 0.3).abs() < 0.001 && oldSize > 0.3 + 0.001) {
+              _fitMapBounds();
+            } else {
+              _refitMapWithPadding();
+            }
+          }
+        });
+      }
     }
   }
 
@@ -121,9 +131,11 @@ class _RideBookingPageState extends State<RideBookingPage> {
     if (_routeDrawn) return;
     await _addMarkers();
     await _drawRoute();
-    setState(() {
-      _routeDrawn = true;
-    });
+    if (mounted) {
+      setState(() {
+        _routeDrawn = true;
+      });
+    }
   }
 
   Future<void> _addMarkers() async {
@@ -162,13 +174,17 @@ class _RideBookingPageState extends State<RideBookingPage> {
       ),
     );
 
-    setState(() {});
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   Future<void> _drawRoute() async {
     if (widget.pickupPlace.latitude == null ||
         widget.destinationPlace.latitude == null) {
-      setState(() => _isLoadingRoute = false);
+      if (mounted) {
+        setState(() => _isLoadingRoute = false);
+      }
       return;
     }
 
@@ -188,29 +204,33 @@ class _RideBookingPageState extends State<RideBookingPage> {
           final polylinePoints = route['overview_polyline']['points'];
           final legs = route['legs'][0];
 
-          setState(() {
-            _duration = legs['duration']['text'];
-            _distance = legs['distance']['text'];
-            _polylines.add(
-              Polyline(
-                polylineId: const PolylineId('route'),
-                points: _decodePolyline(polylinePoints),
-                color: AppStyle.primaryColor(context),
-                width: 4,
-              ),
-            );
-            _isLoadingRoute = false;
-          });
+          if (mounted) {
+            setState(() {
+              _duration = legs['duration']['text'];
+              _distance = legs['distance']['text'];
+              _polylines.add(
+                Polyline(
+                  polylineId: const PolylineId('route'),
+                  points: _decodePolyline(polylinePoints),
+                  color: AppStyle.primaryColor(context),
+                  width: 4,
+                ),
+              );
+              _isLoadingRoute = false;
+            });
 
-          // Initial fit
-          _fitMapBounds();
-          // Calculate prices
-          _calculatePrices(legs['distance']['value'] / 1000);
+            // Initial fit
+            _fitMapBounds();
+            // Calculate prices
+            _calculatePrices(legs['distance']['value'] / 1000);
+          }
         }
       }
     } catch (e) {
       debugPrint('Error drawing route: $e');
-      setState(() => _isLoadingRoute = false);
+      if (mounted) {
+        setState(() => _isLoadingRoute = false);
+      }
     }
   }
 
@@ -266,7 +286,13 @@ class _RideBookingPageState extends State<RideBookingPage> {
       ),
     );
 
-    _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
+    // Fit bounds - padding is handled by GoogleMap widget
+    _mapController!.animateCamera(
+      CameraUpdate.newLatLngBounds(
+        bounds,
+        40, // Edge padding around bounds
+      ),
+    );
   }
 
   void _refitMapWithPadding() {
@@ -306,11 +332,11 @@ class _RideBookingPageState extends State<RideBookingPage> {
       ),
     );
 
-    // Use reasonable padding to keep route clearly visible
+    // Fit bounds - padding is handled by GoogleMap widget
     _mapController!.animateCamera(
       CameraUpdate.newLatLngBounds(
         expandedBounds,
-        100.0,
+        40,
       ),
     );
   }
@@ -322,6 +348,7 @@ class _RideBookingPageState extends State<RideBookingPage> {
   }
 
   void _selectVehicle(VehicleOption vehicle) {
+    if (!mounted) return;
     setState(() {
       _selectedVehicle = vehicle;
       _showConfirmation = false;
@@ -329,6 +356,7 @@ class _RideBookingPageState extends State<RideBookingPage> {
   }
 
   void _confirmSelection() {
+    if (!mounted) return;
     setState(() {
       _showConfirmation = true;
     });
@@ -342,7 +370,7 @@ class _RideBookingPageState extends State<RideBookingPage> {
       canPop: !_showConfirmation,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        if (_showConfirmation) {
+        if (_showConfirmation && mounted) {
           setState(() {
             _showConfirmation = false;
           });
@@ -354,6 +382,7 @@ class _RideBookingPageState extends State<RideBookingPage> {
             // Map with dynamic bottom padding
             GoogleMap(
               padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 136, // Top overlay height
                 bottom: screenHeight * _currentSheetSize,
               ),
               initialCameraPosition: CameraPosition(
@@ -387,9 +416,11 @@ class _RideBookingPageState extends State<RideBookingPage> {
               child: GestureDetector(
                 onTap: () {
                   if (_showConfirmation) {
-                    setState(() {
-                      _showConfirmation = false;
-                    });
+                    if (mounted) {
+                      setState(() {
+                        _showConfirmation = false;
+                      });
+                    }
                   } else {
                     Navigator.pop(context);
                   }
@@ -584,7 +615,7 @@ class _RideBookingPageState extends State<RideBookingPage> {
         const SizedBox(height: 16),
         Expanded(
           child: _isLoadingRoute
-              ? const Center(child: CircularProgressIndicator())
+              ? const Center(child: Loading())
               : ListView.builder(
                   controller: scrollController,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -937,11 +968,13 @@ class _RideBookingPageState extends State<RideBookingPage> {
               subtitle: 'Pay with cash to the driver',
               isSelected: _selectedPaymentMethod == 'Cash',
               onTap: () {
-                setState(() {
-                  _selectedPaymentMethod = 'Cash';
-                  _selectedPaymentIcon = Icons.money;
-                  _selectedPaymentColor = Colors.green;
-                });
+                if (mounted) {
+                  setState(() {
+                    _selectedPaymentMethod = 'Cash';
+                    _selectedPaymentIcon = Icons.money;
+                    _selectedPaymentColor = Colors.green;
+                  });
+                }
                 Navigator.pop(context);
               },
             ),
@@ -956,11 +989,13 @@ class _RideBookingPageState extends State<RideBookingPage> {
               subtitle: 'Pay with debit or credit card',
               isSelected: _selectedPaymentMethod == 'Card',
               onTap: () {
-                setState(() {
-                  _selectedPaymentMethod = 'Card';
-                  _selectedPaymentIcon = Icons.credit_card;
-                  _selectedPaymentColor = Colors.blue;
-                });
+                if (mounted) {
+                  setState(() {
+                    _selectedPaymentMethod = 'Card';
+                    _selectedPaymentIcon = Icons.credit_card;
+                    _selectedPaymentColor = Colors.blue;
+                  });
+                }
                 Navigator.pop(context);
               },
             ),

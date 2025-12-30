@@ -180,8 +180,7 @@ class _GetStartedScreenState extends State<GetStartedScreen> {
                         AppData.slides[currentIndex]["subtitle"],
                         textAlign: TextAlign.start,
                         style: TextStyle(
-                          // color: Colors.white70,
-                          color:  AppStyle.textNeutralColor(context),
+                          color: Colors.white,
                           fontSize: AppStyle.appFontSizeSM,
                           fontWeight: FontWeight.w400,
                         ),

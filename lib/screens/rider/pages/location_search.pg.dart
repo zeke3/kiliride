@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
+import 'package:kiliride/components/loading.dart';
 import 'package:kiliride/components/place_search_field.dart';
 import 'package:kiliride/screens/rider/pages/ride_booking.pg.dart';
 import 'package:kiliride/screens/rider/screens/location_picker.scrn.dart';
@@ -314,7 +315,7 @@ class _LocationSearchPageState extends State<LocationSearchPage> {
             pickupPlace: pickupToUse,
             destinationPlace: _destinationPlace!,
           ),
-          transition: Transition.rightToLeft,
+          transition: Transition.zoom,
           duration: const Duration(milliseconds: 300),
         );
       }
@@ -543,7 +544,7 @@ class _LocationSearchPageState extends State<LocationSearchPage> {
           if (showResults)
             Expanded(
               child: _isSearching
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const Center(child: Loading())
                   : _searchResults.isEmpty
                       ? Center(
                           child: Text(

@@ -192,7 +192,7 @@ class _MyAppState extends ConsumerState<MyApp> {
       translations: LocaleService(),
       locale: Get.locale ?? LocaleService.locale,
       fallbackLocale: LocaleService.fallbackLocale,
-      home: SasMobileApp(
+      home: KilirideApp(
         title: 'SAS Mobile',
         resetAppState: resetAppState, // Pass the reset function
       ),
@@ -201,21 +201,21 @@ class _MyAppState extends ConsumerState<MyApp> {
 }
 
 // Update SasMobileApp to accept the reset function via constructor
-class SasMobileApp extends StatefulWidget {
+class KilirideApp extends StatefulWidget {
   final String title;
   final VoidCallback? resetAppState;
 
-  const SasMobileApp({
+  const KilirideApp({
     super.key,
     required this.title,
     this.resetAppState, // Accept the reset function
   });
 
   @override
-  State<SasMobileApp> createState() => _SasMobileAppState();
+  State<KilirideApp> createState() => _KilirideAppState();
 }
 
-class _SasMobileAppState extends State<SasMobileApp>
+class _KilirideAppState extends State<KilirideApp>
     with WidgetsBindingObserver {
   @override
   void initState() {

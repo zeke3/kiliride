@@ -1,13 +1,17 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:kiliride/components/custom_info_tile.dart';
+import 'package:kiliride/providers/providers.dart';
+import 'package:kiliride/screens/driver/screens/become_driver.scrn.dart';
 import 'package:kiliride/screens/rider/pages/location_search.pg.dart';
+import 'package:kiliride/screens/rider/screens/safety.scrn.dart';
+import 'package:kiliride/screens/rider/screens/my_rides.scrn.dart';
 import 'package:kiliride/shared/styles.shared.dart';
-import 'package:kiliride/widgets/snack_bar.dart' as Funcs;
 
 class RiderHomePage extends StatefulWidget {
   const RiderHomePage({super.key});
@@ -317,10 +321,7 @@ class _RiderHomePageState extends State<RiderHomePage> {
             left: 16,
             child: GestureDetector(
               onTap: () {
-                Funcs.showSnackBar(
-                  context,
-                  'Drawer is under development. Coming soon.',
-                );
+                _scaffoldKey.currentState?.openDrawer();
               },
               child: Container(
                 width: 48,
@@ -525,55 +526,294 @@ class _RiderHomePageState extends State<RiderHomePage> {
 
   Widget _buildDrawer() {
     return Drawer(
-      child: SafeArea(
-        child: Column(
+      surfaceTintColor: Colors.transparent,
+      backgroundColor: const Color.fromARGB(255, 253, 253, 253),
+      child: Consumer(
+        builder: (context, ref, child) {
+          final userProvider = ref.watch(userInfoProvider);
+          final userName = userProvider.userFullName.isNotEmpty
+              ? userProvider.userFullName
+              : 'User';
+          final userRating = '5.00';
+
+          return Column(
+            children: [
+              // User Profile Section
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.only(
+                  top: MediaQuery.of(context).padding.top + 20,
+                  bottom: 20,
+                  left: 16,
+                  right: 16,
+                ),
+                decoration: BoxDecoration(
+                  color: AppStyle.appColor(context),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(AppStyle.appRadiusMid),
+                    bottomRight: Radius.circular(AppStyle.appRadiusMid),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 32,
+                          backgroundColor: Colors.grey[300],
+                          child: Icon(
+                            Icons.person,
+                            size: 32,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                userName,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'My account',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: AppStyle.primaryColor(context),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.star,
+                          color: AppStyle.primaryColor(context),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '$userRating Rating',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppStyle.appGap),
+              // Divider(height: 1, thickness: 1, color: AppStyle.dividerColor(context),),
+
+              // Menu Items
+              Expanded(
+                child: Container(
+                  color: AppStyle.appColor(context),
+                  child: ListView(
+                    padding: EdgeInsets.zero,
+                    children: [
+                      _buildDrawerMenuItem(
+                        icon: Icons.credit_card_outlined,
+                        title: 'Payment',
+                        onTap: () {
+                          Navigator.pop(context);
+                          // Navigate to payment screen
+                        },
+                      ),
+                      _buildDrawerMenuItem(
+                        icon: Icons.local_offer_outlined,
+                        title: 'Promotions',
+                        subtitle: 'Enter promo code',
+                        onTap: () {
+                          Navigator.pop(context);
+                          // Navigate to promotions screen
+                        },
+                      ),
+                      _buildDrawerMenuItem(
+                        icon: Icons.calendar_today_outlined,
+                        title: 'My Rides',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Get.to(
+                            () => const MyRidesScreen(),
+                            transition: Transition.rightToLeft,
+                            duration: const Duration(milliseconds: 300),
+                          );
+                        },
+                      ),
+                      _buildDrawerMenuItem(
+                        icon: Icons.shield_outlined,
+                        title: 'Safety',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Get.to(
+                            () => const SafetyScreen(),
+                            transition: Transition.rightToLeft,
+                            duration: const Duration(milliseconds: 300),
+                          );
+                        },
+                      ),
+                      _buildDrawerMenuItem(
+                        icon: Icons.business_center_outlined,
+                        title: 'Expense Your Rides',
+                        onTap: () {
+                          Navigator.pop(context);
+                          // Navigate to expense screen
+                        },
+                      ),
+                      _buildDrawerMenuItem(
+                        icon: Icons.help_outline,
+                        title: 'Support',
+                        onTap: () {
+                          Navigator.pop(context);
+                          // Navigate to support screen
+                        },
+                      ),
+                      _buildDrawerMenuItem(
+                        icon: Icons.info_outline,
+                        title: 'About',
+                        onTap: () {
+                          Navigator.pop(context);
+                          // Navigate to about screen
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Become a driver banner
+              GestureDetector(
+                onTap: () {
+                  Navigator.pop(context);
+                  // Navigate to become a driver screen
+                  Get.to(
+                    () => BecomeADriverScreen(userData: null),
+                    transition: Transition.leftToRightWithFade,
+                    duration: Duration(milliseconds: 350),
+                    curve: Curves.easeOutCubic,
+                  );
+                },
+                child: Container(
+                  color: Colors.white,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: AppStyle.appPadding,
+                    ),
+                    padding: const EdgeInsets.all(AppStyle.appPadding),
+                    decoration: BoxDecoration(
+                      color: AppStyle.primaryColor(
+                        context,
+                      ).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Become a driver',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Earn money on your schedule',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () {},
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              SizedBox(height: MediaQuery.of(context).padding.bottom),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildDrawerMenuItem({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        child: Row(
           children: [
-            const SizedBox(height: 20),
-            const CircleAvatar(radius: 40, child: Icon(Icons.person, size: 40)),
-            const SizedBox(height: 16),
-            const Text(
-              'Guest User',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'guest@kiliride.com',
-              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 24),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.history),
-              title: const Text('Ride History'),
-              onTap: () => Navigator.pop(context),
-            ),
-            ListTile(
-              leading: const Icon(Icons.payment),
-              title: const Text('Payment Methods'),
-              onTap: () => Navigator.pop(context),
-            ),
-            ListTile(
-              leading: const Icon(Icons.person),
-              title: const Text('Profile'),
-              onTap: () => Navigator.pop(context),
-            ),
-            ListTile(
-              leading: const Icon(Icons.settings),
-              title: const Text('Settings'),
-              onTap: () => Navigator.pop(context),
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.help_outline),
-              title: const Text('Help & Support'),
-              onTap: () => Navigator.pop(context),
-            ),
-            const Spacer(),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                'Version 1.0.0',
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            Icon(icon, size: 24, color: Colors.black87),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w400,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                    ),
+                  ],
+                ],
               ),
             ),
           ],
