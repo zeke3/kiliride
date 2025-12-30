@@ -1,22 +1,27 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
+import 'package:kiliride/components/circle_button.wdg.dart';
 import 'package:kiliride/components/loading.dart';
 import 'package:kiliride/components/place_search_field.dart';
 import 'package:kiliride/screens/rider/pages/driver_arriving.pg.dart';
+import 'package:kiliride/screens/rider/screens/route_editor.scrn.dart';
 import 'package:kiliride/shared/constants.dart';
 import 'package:kiliride/shared/styles.shared.dart';
 
 class RideBookingPage extends StatefulWidget {
   final Place pickupPlace;
   final Place destinationPlace;
+  final List<Place>? initialStops;
 
   const RideBookingPage({
     super.key,
     required this.pickupPlace,
     required this.destinationPlace,
+    this.initialStops,
   });
 
   @override
@@ -39,8 +44,11 @@ class _RideBookingPageState extends State<RideBookingPage> {
   VehicleOption? _selectedVehicle;
   bool _showConfirmation = false;
 
+  // Multi-stop functionality
+  List<Place> _stops = [];
+  late Place _destination;
 
-// Add this near your other state variables (around line 36)
+  // Add this near your other state variables (around line 36)
   String _selectedPaymentMethod = 'Cash';
   IconData _selectedPaymentIcon = Icons.money;
   Color _selectedPaymentColor = Colors.green;
@@ -91,6 +99,8 @@ class _RideBookingPageState extends State<RideBookingPage> {
   @override
   void initState() {
     super.initState();
+    _stops = widget.initialStops ?? [];
+    _destination = widget.destinationPlace;
     _initializeMap();
 
     // Listen to sheet size changes to adjust map
@@ -105,7 +115,7 @@ class _RideBookingPageState extends State<RideBookingPage> {
     super.dispose();
   }
 
-void _onSheetSizeChanged() {
+  void _onSheetSizeChanged() {
     if (!mounted) return;
     final newSize = _sheetController.size;
     if ((newSize - _currentSheetSize).abs() > 0.01) {
@@ -140,10 +150,13 @@ void _onSheetSizeChanged() {
 
   Future<void> _addMarkers() async {
     if (widget.pickupPlace.latitude == null ||
-        widget.destinationPlace.latitude == null) {
+        _destination.latitude == null) {
       return;
     }
 
+    _markers.clear();
+
+    // Add pickup marker
     _markers.add(
       Marker(
         markerId: const MarkerId('pickup'),
@@ -159,20 +172,42 @@ void _onSheetSizeChanged() {
       ),
     );
 
-    _markers.add(
-      Marker(
-        markerId: const MarkerId('destination'),
-        position: LatLng(
-          widget.destinationPlace.latitude!,
-          widget.destinationPlace.longitude!,
+    // Add stop markers
+    for (int i = 0; i < _stops.length; i++) {
+      if (_stops[i].latitude != null && _stops[i].longitude != null) {
+        _markers.add(
+          Marker(
+            markerId: MarkerId('stop_$i'),
+            position: LatLng(_stops[i].latitude!, _stops[i].longitude!),
+            icon: BitmapDescriptor.defaultMarkerWithHue(
+              BitmapDescriptor.hueOrange,
+            ),
+            infoWindow: InfoWindow(
+              title: 'Stop ${i + 1}',
+              snippet: _stops[i].mainText,
+            ),
+          ),
+        );
+      }
+    }
+
+    // Add destination marker
+    if (_destination.latitude != null && _destination.longitude != null) {
+      _markers.add(
+        Marker(
+          markerId: const MarkerId('destination'),
+          position: LatLng(
+            _destination.latitude!,
+            _destination.longitude!,
+          ),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          infoWindow: InfoWindow(
+            title: 'Destination',
+            snippet: _destination.mainText,
+          ),
         ),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-        infoWindow: InfoWindow(
-          title: 'Destination',
-          snippet: widget.destinationPlace.mainText,
-        ),
-      ),
-    );
+      );
+    }
 
     if (mounted) {
       setState(() {});
@@ -181,7 +216,7 @@ void _onSheetSizeChanged() {
 
   Future<void> _drawRoute() async {
     if (widget.pickupPlace.latitude == null ||
-        widget.destinationPlace.latitude == null) {
+        _destination.latitude == null) {
       if (mounted) {
         setState(() => _isLoadingRoute = false);
       }
@@ -191,9 +226,22 @@ void _onSheetSizeChanged() {
     final origin =
         '${widget.pickupPlace.latitude},${widget.pickupPlace.longitude}';
     final destination =
-        '${widget.destinationPlace.latitude},${widget.destinationPlace.longitude}';
+        '${_destination.latitude},${_destination.longitude}';
+
+    // Build waypoints string for stops
+    String waypoints = '';
+    if (_stops.isNotEmpty) {
+      final validStops = _stops
+          .where((s) => s.latitude != null && s.longitude != null)
+          .toList();
+      if (validStops.isNotEmpty) {
+        waypoints =
+            '&waypoints=${validStops.map((s) => '${s.latitude},${s.longitude}').join('|')}';
+      }
+    }
+
     final url =
-        'https://maps.googleapis.com/maps/api/directions/json?origin=$origin&destination=$destination&key=$googleMapApiKey';
+        'https://maps.googleapis.com/maps/api/directions/json?origin=$origin&destination=$destination$waypoints&key=$googleMapApiKey';
 
     try {
       final response = await http.get(Uri.parse(url));
@@ -202,12 +250,21 @@ void _onSheetSizeChanged() {
         if (data['status'] == 'OK') {
           final route = data['routes'][0];
           final polylinePoints = route['overview_polyline']['points'];
-          final legs = route['legs'][0];
+          final legs = route['legs'] as List;
+
+          // Calculate total duration and distance
+          int totalDurationSeconds = 0;
+          int totalDistanceMeters = 0;
+          for (var leg in legs) {
+            totalDurationSeconds += leg['duration']['value'] as int;
+            totalDistanceMeters += leg['distance']['value'] as int;
+          }
 
           if (mounted) {
             setState(() {
-              _duration = legs['duration']['text'];
-              _distance = legs['distance']['text'];
+              _duration = _formatDuration(totalDurationSeconds);
+              _distance = _formatDistance(totalDistanceMeters);
+              _polylines.clear();
               _polylines.add(
                 Polyline(
                   polylineId: const PolylineId('route'),
@@ -222,7 +279,7 @@ void _onSheetSizeChanged() {
             // Initial fit
             _fitMapBounds();
             // Calculate prices
-            _calculatePrices(legs['distance']['value'] / 1000);
+            _calculatePrices(totalDistanceMeters / 1000);
           }
         }
       }
@@ -232,6 +289,24 @@ void _onSheetSizeChanged() {
         setState(() => _isLoadingRoute = false);
       }
     }
+  }
+
+  String _formatDuration(int seconds) {
+    final minutes = (seconds / 60).round();
+    if (minutes < 60) {
+      return '$minutes min';
+    } else {
+      final hours = (minutes / 60).floor();
+      final remainingMinutes = minutes % 60;
+      return remainingMinutes > 0
+          ? '$hours h $remainingMinutes min'
+          : '$hours h';
+    }
+  }
+
+  String _formatDistance(int meters) {
+    final km = meters / 1000;
+    return '${km.toStringAsFixed(1)} km';
   }
 
   List<LatLng> _decodePolyline(String encoded) {
@@ -290,7 +365,7 @@ void _onSheetSizeChanged() {
     _mapController!.animateCamera(
       CameraUpdate.newLatLngBounds(
         bounds,
-        40, // Edge padding around bounds
+        30, // Edge padding around bounds
       ),
     );
   }
@@ -318,8 +393,10 @@ void _onSheetSizeChanged() {
     );
 
     // Keep route visible - moderate expansion to show context without losing route
-    final latDelta = (bounds.northeast.latitude - bounds.southwest.latitude) * 0.2;
-    final lngDelta = (bounds.northeast.longitude - bounds.southwest.longitude) * 0.2;
+    final latDelta =
+        (bounds.northeast.latitude - bounds.southwest.latitude) * 0.2;
+    final lngDelta =
+        (bounds.northeast.longitude - bounds.southwest.longitude) * 0.2;
 
     final expandedBounds = LatLngBounds(
       southwest: LatLng(
@@ -334,10 +411,7 @@ void _onSheetSizeChanged() {
 
     // Fit bounds - padding is handled by GoogleMap widget
     _mapController!.animateCamera(
-      CameraUpdate.newLatLngBounds(
-        expandedBounds,
-        40,
-      ),
+      CameraUpdate.newLatLngBounds(expandedBounds, 30),
     );
   }
 
@@ -362,6 +436,38 @@ void _onSheetSizeChanged() {
     });
   }
 
+  void _removeStop(int index) async {
+    setState(() {
+      _stops.removeAt(index);
+      _routeDrawn = false;
+    });
+    await _addMarkers();
+    await _drawRoute();
+  }
+
+  void _showRouteEditor() async {
+    final result = await Navigator.push<Map<String, dynamic>?>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RouteEditorScreen(
+          pickupPlace: widget.pickupPlace,
+          destinationPlace: _destination,
+          initialStops: _stops,
+        ),
+      ),
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        _stops = result['stops'] as List<Place>;
+        _destination = result['destination'] as Place;
+        _routeDrawn = false;
+      });
+      await _addMarkers();
+      await _drawRoute();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
@@ -382,7 +488,9 @@ void _onSheetSizeChanged() {
             // Map with dynamic bottom padding
             GoogleMap(
               padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top + 136, // Top overlay height
+                top:
+                    MediaQuery.of(context).padding.top +
+                    136, // Top overlay height
                 bottom: screenHeight * _currentSheetSize,
               ),
               initialCameraPosition: CameraPosition(
@@ -410,139 +518,178 @@ void _onSheetSizeChanged() {
             ),
 
             // Back button
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 16,
-              left: 16,
-              child: GestureDetector(
-                onTap: () {
-                  if (_showConfirmation) {
-                    if (mounted) {
-                      setState(() {
-                        _showConfirmation = false;
-                      });
-                    }
-                  } else {
-                    Navigator.pop(context);
-                  }
-                },
-                child: Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(Icons.arrow_back),
-                ),
-              ),
-            ),
+            // Positioned(
+            //   top: MediaQuery.of(context).padding.top + 16,
+            //   left: 16,
+            //   child: GestureDetector(
+            //     onTap: () {
+            //       if (_showConfirmation) {
+            //         if (mounted) {
+            //           setState(() {
+            //             _showConfirmation = false;
+            //           });
+            //         }
+            //       } else {
+            //         Navigator.pop(context);
+            //       }
+            //     },
+            //     child: Container(
+            //       width: 48,
+            //       height: 48,
+            //       decoration: BoxDecoration(
+            //         color: Colors.white,
+            //         borderRadius: BorderRadius.circular(24),
+            //         boxShadow: [
+            //           BoxShadow(
+            //             color: Colors.black.withOpacity(0.1),
+            //             blurRadius: 8,
+            //             offset: const Offset(0, 2),
+            //           ),
+            //         ],
+            //       ),
+            //       child: const Icon(Icons.arrow_back),
+            //     ),
+            //   ),
+            // ),
 
             // Route info header
             Positioned(
               top: MediaQuery.of(context).padding.top + 16,
-              left: 80,
-              right: 16,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.circle,
-                                size: 8,
-                                color: Colors.green[600],
+              left: AppStyle.appGap,
+              right: AppStyle.appGap,
+              child: GestureDetector(
+                // onTap: _showRouteEditor,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(AppStyle.appRadiusLLG),
+                    // boxShadow: [
+                    //   BoxShadow(
+                    //     color: Colors.black.withOpacity(0.1),
+                    //     blurRadius: 8,
+                    //     offset: const Offset(0, 2),
+                    //   ),
+                    // ],
+                  ),
+                  child: Row(
+                    children: [
+                      !_showConfirmation
+                          ? CircleButtonWDG(
+                              iconSrc: 'assets/icons/close.svg',
+                              solidColor: Color.fromRGBO(242, 242, 242, 1),
+                              color: Color.fromRGBO(137, 138, 141, 1),
+                              onTap: () {
+                                  Navigator.pop(context);
+                                }
+                            )
+                          : CircleButtonWDG(
+                              iconSrc: 'assets/icons/arrow_back.svg',
+                              solidColor: Color.fromRGBO(242, 242, 242, 1),
+                              color: Color.fromRGBO(137, 138, 141, 1),
+                              onTap: () {
+                                  if (mounted) {
+                                    setState(() {
+                                      _showConfirmation = false;
+                                    });
+                                  }
+                              },
+                            ),
+                      const SizedBox(width: AppStyle.appGap / 2),
+
+                      Expanded(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+
+                          children: [
+                            Text(
+                              widget.pickupPlace.mainText,
+                              style: TextStyle(
+                                fontSize: AppStyle.appFontSizeSM,
+                                fontWeight: FontWeight.w700,
+                                color: AppStyle.primaryColor(context),
                               ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  widget.pickupPlace.mainText,
-                                  style: const TextStyle(
-                                    fontSize: AppStyle.appFontSizeSM,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(width: AppStyle.appGap),
+
+                            // Show stops (DO NOT DELETE THIS)
+                            // ..._stops.asMap().entries.map((entry) {
+                            //   return Column(
+                            //     children: [
+                            //       const SizedBox(height: AppStyle.appGap),
+                            //       Divider(
+                            //         height: 8,
+                            //         color: AppStyle.dividerColor(context),
+                            //       ),
+                            //       const SizedBox(height: AppStyle.appGap),
+                            //       Row(
+                            //         children: [
+                            //           Icon(
+                            //             Icons.circle,
+                            //             size: 8,
+                            //             color: Colors.orange[600],
+                            //           ),
+                            //           const SizedBox(width: 8),
+                            //           Expanded(
+                            //             child: Text(
+                            //               entry.value.mainText,
+                            //               style: const TextStyle(
+                            //                 fontSize: AppStyle.appFontSizeSM,
+                            //               ),
+                            //               maxLines: 1,
+                            //               overflow: TextOverflow.ellipsis,
+                            //             ),
+                            //           ),
+                            //           const SizedBox(width: 8),
+                            //           GestureDetector(
+                            //             onTap: () => _removeStop(entry.key),
+                            //             child: Icon(
+                            //               Icons.close,
+                            //               size: 16,
+                            //               color: Colors.grey[600],
+                            //             ),
+                            //           ),
+                            //         ],
+                            //       ),
+                            //     ],
+                            //   );
+                            // }),
+                            // const SizedBox(width: AppStyle.appGap),
+                            SvgPicture.asset(
+                              'assets/icons/arrow_forward.svg',
+                              width: 8,
+                              height: 8,
+                              color: Colors.grey,
+                            ),
+                            const SizedBox(width: AppStyle.appGap),
+                            Expanded(
+                              child: Text(
+                                 _destination.mainText,
+                                style: const TextStyle(
+                                  fontSize: AppStyle.appFontSizeSM,
+                                  fontWeight: FontWeight.w700,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: AppStyle.appGap),
-                          Divider(
-                            height: 8,
-                            color: AppStyle.dividerColor(context),
-                          ),
-                          const SizedBox(height: AppStyle.appGap),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.circle,
-                                size: 8,
-                                color: Colors.red[600],
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  widget.destinationPlace.mainText,
-                                  style: const TextStyle(
-                                    fontSize: AppStyle.appFontSizeSM,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    if (_duration.isNotEmpty) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppStyle.primaryColor(context),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          _duration,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                      const SizedBox(width: AppStyle.appGap / 2),
+                      CircleButtonWDG(
+                        solidColor: Color.fromRGBO(242, 242, 242, 1),
+                        color: Color.fromRGBO(137, 138, 141, 1),
+                        iconSrc: _stops.isEmpty ? 'assets/icons/add.svg' : 'assets/icons/pen.svg',
+                        onTap: _showRouteEditor,
                       ),
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -827,7 +974,7 @@ void _onSheetSizeChanged() {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-// Replace the existing payment Container with this:
+            // Replace the existing payment Container with this:
             GestureDetector(
               onTap: _showPaymentMethodSheet,
               child: Container(
@@ -838,7 +985,7 @@ void _onSheetSizeChanged() {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppStyle.borderColor(context)!,),
+                  border: Border.all(color: AppStyle.borderColor(context)!),
                 ),
                 child: Row(
                   children: [
@@ -879,11 +1026,11 @@ void _onSheetSizeChanged() {
                     MaterialPageRoute(
                       builder: (context) => DriverArrivingPage(
                         pickupAddress: widget.pickupPlace.mainText,
-                        destinationAddress: widget.destinationPlace.mainText,
+                        destinationAddress: _destination.mainText,
                         pickupLat: widget.pickupPlace.latitude!,
                         pickupLng: widget.pickupPlace.longitude!,
-                        destinationLat: widget.destinationPlace.latitude!,
-                        destinationLng: widget.destinationPlace.longitude!,
+                        destinationLat: _destination.latitude!,
+                        destinationLng: _destination.longitude!,
                         vehicleName: _selectedVehicle!.name,
                         totalPrice: _selectedVehicle!.calculatedPrice,
                         paymentMethod: _selectedPaymentMethod,
@@ -1096,3 +1243,5 @@ class VehicleOption {
     required this.estimatedTime,
   });
 }
+
+
