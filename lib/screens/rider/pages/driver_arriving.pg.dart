@@ -199,7 +199,7 @@ class _DriverArrivingPageState extends State<DriverArrivingPage> {
     _mapController!.animateCamera(
       CameraUpdate.newLatLngBounds(
         bounds,
-        50, // Edge padding around bounds
+        30, // Edge padding around bounds
       ),
     );
   }

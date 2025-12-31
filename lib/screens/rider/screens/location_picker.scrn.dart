@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -13,6 +14,13 @@ import 'package:kiliride/shared/funcs.main.ctrl.dart'; // <-- Make sure to impor
 import 'package:kiliride/shared/styles.shared.dart';
 import 'package:flutter/services.dart';
 import 'package:lottie/lottie.dart';
+
+// Custom debug print function
+void kDebug(String message) {
+  if (kDebugMode) {
+    debugPrint(message);
+  }
+}
 
 class LocationPickerScreen extends riverpod.ConsumerStatefulWidget {
   final LatLng initialLocation;
@@ -49,7 +57,7 @@ class _LocationPickerScreenState
 
   late AnimationController _animationController;
   late Animation<double> _animation;
-late AnimationController _lottieController;
+  late AnimationController _lottieController;
 
   bool _showShadow = true;
 
@@ -68,7 +76,7 @@ late AnimationController _lottieController;
     );
     _animation.addListener(() => setState(() {}));
 
-      _lottieController = AnimationController(vsync: this);
+    _lottieController = AnimationController(vsync: this);
   }
 
   @override
@@ -77,14 +85,14 @@ late AnimationController _lottieController;
     _mapController?.dispose();
     _searchController.dispose(); // <-- ADDED
     _animationController.dispose();
-    _lottieController.dispose(); 
+    _lottieController.dispose();
     super.dispose();
   }
 
   // --- ADDED: Handler for search selection ---
   void _onPlaceSelectedFromSearch(Place place) {
-    debugPrint("📍 Place selected from search: ${place.mainText}");
-    debugPrint("📍 Coordinates: ${place.latitude}, ${place.longitude}");
+    kDebug("📍 Place selected from search: ${place.mainText}");
+    kDebug("📍 Coordinates: ${place.latitude}, ${place.longitude}");
 
     if (place.latitude == null || place.longitude == null) {
       Funcs.showSnackBar(
@@ -107,7 +115,7 @@ late AnimationController _lottieController;
     });
     _animationController.reset(); // Reset to lifted position
 
-    debugPrint("📍 Selected place set, _userSelectedPlace = true");
+    kDebug("📍 Selected place set, _userSelectedPlace = true");
 
     // Mark that we're about to do a programmatic camera move
     _isProgrammaticCameraMove = true;
@@ -207,7 +215,6 @@ late AnimationController _lottieController;
 
           // Build main text - prioritize more specific location info
           String mainAddressText;
-
           // Priority order: Place Name > POI > Establishment > Premise > Route > Neighborhood > Sublocality > Locality
           if (placeName != null &&
               placeName.isNotEmpty &&
@@ -314,7 +321,7 @@ late AnimationController _lottieController;
 
   // Called when the map camera stops moving
   void _onCameraIdle() {
-    debugPrint(
+    kDebug(
       "📍 _onCameraIdle called, _userSelectedPlace = $_userSelectedPlace, _isProgrammaticCameraMove = $_isProgrammaticCameraMove",
     );
 
@@ -323,7 +330,7 @@ late AnimationController _lottieController;
 
     // Don't reverse geocode if user just selected a place from search
     if (_userSelectedPlace) {
-      debugPrint("📍 Skipping reverse geocode - user selected from search");
+      kDebug("📍 Skipping reverse geocode - user selected from search");
       if (_userSelectedPlace) {
         setState(() {
           _isGeocoding = false;
@@ -339,7 +346,7 @@ late AnimationController _lottieController;
       return;
     }
 
-    debugPrint("📍 Starting reverse geocode from camera idle");
+    kDebug("📍 Starting reverse geocode from camera idle");
     _geocodeTimer?.cancel();
     _geocodeTimer = Timer(const Duration(milliseconds: 200), () {
       if (_mapController != null) {
@@ -391,11 +398,11 @@ late AnimationController _lottieController;
                   _showShadow = true;
                 });
                 _animationController.reset();
-                debugPrint(
+                kDebug(
                   "📍 User started dragging map - resetting _userSelectedPlace",
                 );
               } else {
-                debugPrint(
+                kDebug(
                   "📍 Programmatic camera move started - keeping _userSelectedPlace",
                 );
               }
@@ -425,7 +432,7 @@ late AnimationController _lottieController;
                 top:
                     MediaQuery.of(context).size.height / 2 +
                     _animation.value -
-                    64.9, 
+                    64.9,
                 left:
                     MediaQuery.of(context).size.width / 2 -
                     39.5, // 40 is half lottie width
@@ -619,7 +626,13 @@ late AnimationController _lottieController;
                               // Pop and return the selected 'Place' object
                               Navigator.pop(context, _selectedPlace);
                             },
-                      child: Text(widget.confirmButtonText.tr, style: TextStyle(fontSize: AppStyle.appFontSize, fontWeight: FontWeight.w700),),
+                      child: Text(
+                        widget.confirmButtonText.tr,
+                        style: TextStyle(
+                          fontSize: AppStyle.appFontSize,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ),
                 ],

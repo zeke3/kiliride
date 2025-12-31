@@ -417,6 +417,37 @@ class _PlaceSearchScreenState extends State<_PlaceSearchScreen> {
     return Icons.location_on_outlined;
   }
 
+  Widget _buildHighlightedText(String text, BuildContext context) {
+    final words = text.split(' ');
+    if (words.isEmpty) {
+      return Text(text);
+    }
+
+    return RichText(
+      text: TextSpan(
+        children: [
+          TextSpan(
+            text: words.first,
+            style: TextStyle(
+              color: AppStyle.primaryColor(context),
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          if (words.length > 1)
+            TextSpan(
+              text: ' ${words.skip(1).join(' ')}',
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyLarge?.color,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   // --- MODIFIED: build() method
   @override
   Widget build(BuildContext context) {
@@ -428,7 +459,7 @@ class _PlaceSearchScreenState extends State<_PlaceSearchScreen> {
           return ListTile(
             contentPadding: EdgeInsets.zero,
             leading: Icon(_getIconForPlaceType(place.types)),
-            title: Text(place.mainText),
+            title: _buildHighlightedText(place.mainText, context),
             subtitle: Text(place.secondaryText),
             onTap: () {
               //  Always enabled tap
@@ -471,6 +502,10 @@ class _PlaceSearchScreenState extends State<_PlaceSearchScreen> {
     return Scaffold(
       backgroundColor: AppStyle.appColor(context),
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Text(
           'Search ${widget.title ?? "Place"}',
           style: TextStyle(

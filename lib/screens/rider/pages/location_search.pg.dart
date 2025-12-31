@@ -382,6 +382,89 @@ class _LocationSearchPageState extends State<LocationSearchPage> {
     return Icons.location_on_outlined;
   }
 
+  Widget _buildHighlightedText(String text, BuildContext context) {
+    final words = text.split(' ');
+    if (words.isEmpty) {
+      return Text(
+        text,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+        ),
+      );
+    }
+
+    return RichText(
+      text: TextSpan(
+        children: [
+          TextSpan(
+            text: words.first,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: AppStyle.primaryColor(context),
+            ),
+          ),
+          if (words.length > 1)
+            TextSpan(
+              text: ' ${words.skip(1).join(' ')}',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Theme.of(context).textTheme.bodyLarge?.color,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget? _buildDistanceText(Place place) {
+    print("PLACE LATITUDE: ${place.latitude}, LONGITUDE: ${place.longitude}");
+    if (place.latitude == null || place.longitude == null) {
+      return null;
+    }
+
+    // Determine reference point for distance calculation
+    LatLng? referencePoint;
+
+    if (_isDestinationFocused && _pickupPlace != null &&
+        _pickupPlace!.latitude != null && _pickupPlace!.longitude != null) {
+      // When searching for destination, show distance from pickup location
+      referencePoint = LatLng(_pickupPlace!.latitude!, _pickupPlace!.longitude!);
+    } else if (_isPickupFocused && _currentLocation != null) {
+      // When searching for pickup, show distance from current location
+      referencePoint = _currentLocation;
+    }
+
+    if (referencePoint == null) {
+      return null;
+    }
+
+    final distance = Geolocator.distanceBetween(
+      referencePoint.latitude,
+      referencePoint.longitude,
+      place.latitude!,
+      place.longitude!,
+    );
+
+    String distanceText;
+    if (distance < 1000) {
+      distanceText = '${distance.round()} m';
+    } else {
+      distanceText = '${(distance / 1000).toStringAsFixed(1)} km';
+    }
+
+    return Text(
+      distanceText,
+      style: TextStyle(
+        fontSize: 13,
+        color: Colors.grey[600],
+        fontWeight: FontWeight.w500,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool showResults = _isPickupFocused || _isDestinationFocused;
@@ -389,6 +472,7 @@ class _LocationSearchPageState extends State<LocationSearchPage> {
     return Scaffold(
       backgroundColor: AppStyle.appColor(context),
       appBar: AppBar(
+        surfaceTintColor: Colors.transparent,
         backgroundColor: AppStyle.appColor(context),
         elevation: 0,
         leading: IconButton(
@@ -408,12 +492,12 @@ class _LocationSearchPageState extends State<LocationSearchPage> {
         children: [
           // Location input fields
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(AppStyle.appPadding),
             child: Column(
               children: [
                 // Pick-up location field
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
                     color: _isPickupFocused
                         ? Colors.white
@@ -476,7 +560,7 @@ class _LocationSearchPageState extends State<LocationSearchPage> {
 
                 // Destination field
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
                     color: _isDestinationFocused
                         ? Colors.white
@@ -583,12 +667,9 @@ class _LocationSearchPageState extends State<LocationSearchPage> {
                                     color: Colors.grey[700],
                                   ),
                                 ),
-                                title: Text(
+                                title: _buildHighlightedText(
                                   place.mainText,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                                  context,
                                 ),
                                 subtitle: place.secondaryText.isNotEmpty
                                     ? Text(
@@ -599,7 +680,7 @@ class _LocationSearchPageState extends State<LocationSearchPage> {
                                         ),
                                       )
                                     : null,
-                                trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                                trailing: _buildDistanceText(place),
                                 onTap: () {
                                   if (_isPickupFocused) {
                                     _onPickupPlaceSelected(place);

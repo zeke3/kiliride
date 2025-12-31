@@ -147,6 +147,10 @@ class _SplitFareScreenState extends State<SplitFareScreen> {
           iconTheme: IconThemeData(
             color: AppStyle.textColored(context),
           ),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.pop(context),
+          ),
           actions: [
             TextButton(
               onPressed: _confirmSelection,

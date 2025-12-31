@@ -66,6 +66,10 @@ class _CancelRideReasonScreenState extends State<CancelRideReasonScreen> {
               color: AppStyle.textColored(context),
             ),
           ),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.pop(context),
+          ),
           iconTheme: IconThemeData(
             color: AppStyle.textColored(context),
           ),

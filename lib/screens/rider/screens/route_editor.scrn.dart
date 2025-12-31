@@ -3,8 +3,12 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:get/get_utils/src/extensions/internacionalization.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:kiliride/components/loading.dart';
 import 'package:kiliride/components/place_search_field.dart';
+import 'package:kiliride/screens/rider/screens/location_picker.scrn.dart';
 import 'package:kiliride/shared/constants.dart';
 import 'package:kiliride/shared/styles.shared.dart';
 import 'package:http/http.dart' as http;
@@ -176,6 +180,32 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
     _searchFocusNode.unfocus();
   }
 
+  void _openMapPicker() async {
+    // Determine initial location - use last stop or destination
+    final LatLng initialPosition = _stops.isNotEmpty &&
+            _stops.last.latitude != null &&
+            _stops.last.longitude != null
+        ? LatLng(_stops.last.latitude!, _stops.last.longitude!)
+        : (_destination.latitude != null && _destination.longitude != null
+            ? LatLng(_destination.latitude!, _destination.longitude!)
+            : const LatLng(-6.7924, 39.2083)); // Default: Dar es Salaam
+
+    final Place? selectedPlace = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LocationPickerScreen(
+          initialLocation: initialPosition,
+          appBarTitle: "Pick Stop Location",
+          confirmButtonText: "Confirm Stop",
+        ),
+      ),
+    );
+
+    if (selectedPlace != null && mounted) {
+      _onPlaceSelected(selectedPlace);
+    }
+  }
+
   void _removeStop(int index) {
     setState(() {
       _stops.removeAt(index);
@@ -326,9 +356,9 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Your route',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        title: Text(
+          'Your route'.tr,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
         centerTitle: true,
       ),
@@ -374,9 +404,34 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
                 decoration: InputDecoration(
                   hintText: 'Search for a place',
                   prefixIcon: const Icon(Icons.search),
-                  suffixIcon: IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: _cancelAddStop,
+                  suffixIcon: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_searchController.text.isNotEmpty)
+                        IconButton(
+                          icon: const Icon(Icons.clear, size: 20),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {
+                              _searchResults = [];
+                              _isSearching = false;
+                            });
+                          },
+                        ),
+                      GestureDetector(
+                        onTap: _openMapPicker,
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: SvgPicture.asset(
+                            'assets/icons/grey_map.svg',
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: _cancelAddStop,
+                      ),
+                    ],
                   ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
