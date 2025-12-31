@@ -17,6 +17,40 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
 
+  // Map style to grey out POI icons and labels
+  final String _mapStyle = '''[
+    {
+      "featureType": "poi",
+      "elementType": "labels.icon",
+      "stylers": [
+        {
+          "saturation": -100
+        },
+        {
+          "lightness": 50
+        }
+      ]
+    },
+    {
+      "featureType": "poi",
+      "elementType": "labels.text.fill",
+      "stylers": [
+        {
+          "color": "#9e9e9e"
+        }
+      ]
+    },
+    {
+      "featureType": "poi",
+      "elementType": "labels.text.stroke",
+      "stylers": [
+        {
+          "color": "#ffffff"
+        }
+      ]
+    }
+  ]''';
+
   @override
   void initState() {
     super.initState();
@@ -139,6 +173,7 @@ class _RideDetailsScreenState extends State<RideDetailsScreen> {
               child: Stack(
                 children: [
                   GoogleMap(
+                    style: _mapStyle,
                     initialCameraPosition: const CameraPosition(
                       target: LatLng(-6.5807, 38.9773),
                       zoom: 9,

@@ -35,6 +35,40 @@ class _RideBookingPageState extends State<RideBookingPage> {
   bool _isLoadingRoute = true;
   bool _routeDrawn = false;
 
+  // Map style to grey out POI icons and labels
+  final String _mapStyle = '''[
+    {
+      "featureType": "poi",
+      "elementType": "labels.icon",
+      "stylers": [
+        {
+          "saturation": -100
+        },
+        {
+          "lightness": 50
+        }
+      ]
+    },
+    {
+      "featureType": "poi",
+      "elementType": "labels.text.fill",
+      "stylers": [
+        {
+          "color": "#9e9e9e"
+        }
+      ]
+    },
+    {
+      "featureType": "poi",
+      "elementType": "labels.text.stroke",
+      "stylers": [
+        {
+          "color": "#ffffff"
+        }
+      ]
+    }
+  ]''';
+
   // Bottom sheet
   final DraggableScrollableController _sheetController =
       DraggableScrollableController();
@@ -487,6 +521,7 @@ class _RideBookingPageState extends State<RideBookingPage> {
           children: [
             // Map with dynamic bottom padding
             GoogleMap(
+              style: _mapStyle,
               padding: EdgeInsets.only(
                 top:
                     MediaQuery.of(context).padding.top +
@@ -685,7 +720,7 @@ class _RideBookingPageState extends State<RideBookingPage> {
                       CircleButtonWDG(
                         solidColor: Color.fromRGBO(242, 242, 242, 1),
                         color: Color.fromRGBO(137, 138, 141, 1),
-                        iconSrc: _stops.isEmpty ? 'assets/icons/add.svg' : 'assets/icons/pen.svg',
+                        iconSrc: _stops.isEmpty ? 'assets/icons/location_add.svg' : 'assets/icons/pen.svg',
                         onTap: _showRouteEditor,
                       ),
                     ],

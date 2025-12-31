@@ -58,6 +58,41 @@ class _DriverArrivingPageState extends State<DriverArrivingPage> {
   double _driverLat = -6.7924;
   double _driverLng = 39.2083;
 
+
+  // Map style to grey out POI icons and labels
+  final String _mapStyle = '''[
+    {
+      "featureType": "poi",
+      "elementType": "labels.icon",
+      "stylers": [
+        {
+          "saturation": -100
+        },
+        {
+          "lightness": 50
+        }
+      ]
+    },
+    {
+      "featureType": "poi",
+      "elementType": "labels.text.fill",
+      "stylers": [
+        {
+          "color": "#9e9e9e"
+        }
+      ]
+    },
+    {
+      "featureType": "poi",
+      "elementType": "labels.text.stroke",
+      "stylers": [
+        {
+          "color": "#ffffff"
+        }
+      ]
+    }
+  ]''';
+
   @override
   void initState() {
     super.initState();
@@ -180,6 +215,7 @@ class _DriverArrivingPageState extends State<DriverArrivingPage> {
         children: [
           // Map
           GoogleMap(
+            style: _mapStyle,
             padding: EdgeInsets.only(
               top: topPadding,
               bottom: bottomPadding,

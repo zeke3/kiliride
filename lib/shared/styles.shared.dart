@@ -722,7 +722,13 @@ class AppStyle {
         "elementType": "labels.icon",
         "stylers": [
           {
-            "visibility": "off"
+            "visibility": "on"
+          },
+          {
+            "saturation": -100
+          },
+          {
+            "lightness": 25
           }
         ]
       },
@@ -773,7 +779,7 @@ class AppStyle {
         "featureType": "poi.business",
         "stylers": [
           {
-            "visibility": "off"
+            "visibility": "on"
           }
         ]
       },
@@ -893,7 +899,13 @@ class AppStyle {
       "elementType": "labels.icon",
       "stylers": [
         {
-          "visibility": "off"
+          "visibility": "on"
+        },
+        {
+          "saturation": -100
+        },
+        {
+          "lightness": -25
         }
       ]
     },
@@ -961,7 +973,7 @@ class AppStyle {
       "featureType": "poi.business",
       "stylers": [
         {
-          "visibility": "off"
+          "visibility": "on"
         }
       ]
     },

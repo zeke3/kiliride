@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:kiliride/components/loading.dart';
 import 'package:kiliride/screens/rider/screens/location_picker.scrn.dart';
 import 'package:kiliride/services/permission_service.service.dart';
 import 'package:kiliride/shared/funcs.main.ctrl.dart';
@@ -453,7 +454,7 @@ class _PlaceSearchScreenState extends State<_PlaceSearchScreen> {
 
       // If we are loading and have no results to show, show a spinner
       if (_isLoading && _predictions.isEmpty) {
-        return const Center(child: CircularProgressIndicator());
+        return Loading();
       }
 
       // If we are NOT loading and have no results, show "No results"

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:get/get.dart';
@@ -12,6 +11,8 @@ import 'package:kiliride/providers/theme.provider.dart';
 import 'package:kiliride/shared/constants.dart';
 import 'package:kiliride/shared/funcs.main.ctrl.dart'; // <-- Make sure to import Funcs
 import 'package:kiliride/shared/styles.shared.dart';
+import 'package:flutter/services.dart';
+import 'package:lottie/lottie.dart';
 
 class LocationPickerScreen extends riverpod.ConsumerStatefulWidget {
   final LatLng initialLocation;
@@ -35,6 +36,7 @@ class _LocationPickerScreenState
   GoogleMapController? _mapController;
   late LatLng _currentLocation;
   Place? _selectedPlace;
+  Place? _oldSelectedPlace;
   bool _isGeocoding = true;
   Timer? _geocodeTimer;
   bool _userSelectedPlace = false; // Track if user selected from search
@@ -45,10 +47,11 @@ class _LocationPickerScreenState
   late final TextEditingController _searchController;
   // --- END ADDED ---
 
-  // --- ADDED FOR ANIMATION ---
-  late final AnimationController _glowController;
-  late final Animation<double> _glowAnimation;
-  // --- END ADDED ---
+  late AnimationController _animationController;
+  late Animation<double> _animation;
+late AnimationController _lottieController;
+
+  bool _showShadow = true;
 
   @override
   void initState() {
@@ -56,25 +59,25 @@ class _LocationPickerScreenState
     _currentLocation = widget.initialLocation;
     _searchController = TextEditingController(); // <-- ADDED
 
-    // --- ADDED FOR ANIMATION ---
-    _glowController = AnimationController(
+    _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000),
+      duration: const Duration(milliseconds: 300),
     );
-    _glowAnimation = Tween(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _glowController, curve: Curves.easeOut));
-    _glowController.repeat(reverse: true);
-    // --- END ADDED ---
+    _animation = Tween<double>(begin: -10, end: 0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutBack),
+    );
+    _animation.addListener(() => setState(() {}));
+
+      _lottieController = AnimationController(vsync: this);
   }
 
   @override
   void dispose() {
     _geocodeTimer?.cancel();
-    _glowController.dispose();
     _mapController?.dispose();
     _searchController.dispose(); // <-- ADDED
+    _animationController.dispose();
+    _lottieController.dispose(); 
     super.dispose();
   }
 
@@ -98,9 +101,11 @@ class _LocationPickerScreenState
     setState(() {
       _currentLocation = newPosition;
       _selectedPlace = place;
-      _isGeocoding = false;
+      _isGeocoding = true; // Changed to true for lift animation
       _userSelectedPlace = true; // Mark that user selected this place
+      _showShadow = true;
     });
+    _animationController.reset(); // Reset to lifted position
 
     debugPrint("📍 Selected place set, _userSelectedPlace = true");
 
@@ -279,7 +284,17 @@ class _LocationPickerScreenState
                 country: country,
                 region: region,
               );
+              _oldSelectedPlace = _selectedPlace;
               _isGeocoding = false;
+            });
+            _animationController.forward().then((_) {
+              HapticFeedback.lightImpact();
+              setState(() {
+                _showShadow = false;
+              });
+
+              _lottieController.reset();
+              _lottieController.forward();
             });
           }
         } else {
@@ -309,6 +324,18 @@ class _LocationPickerScreenState
     // Don't reverse geocode if user just selected a place from search
     if (_userSelectedPlace) {
       debugPrint("📍 Skipping reverse geocode - user selected from search");
+      if (_userSelectedPlace) {
+        setState(() {
+          _isGeocoding = false;
+        });
+        _animationController.forward().then((_) {
+          HapticFeedback.lightImpact();
+          _userSelectedPlace = false;
+          setState(() {
+            _showShadow = false;
+          });
+        });
+      }
       return;
     }
 
@@ -361,7 +388,9 @@ class _LocationPickerScreenState
                   _isGeocoding = true;
                   _userSelectedPlace =
                       false; // Reset when user manually drags map
+                  _showShadow = true;
                 });
+                _animationController.reset();
                 debugPrint(
                   "📍 User started dragging map - resetting _userSelectedPlace",
                 );
@@ -374,41 +403,50 @@ class _LocationPickerScreenState
             onCameraIdle: _onCameraIdle,
           ),
 
-          // --- GLOWING EFFECT ---
-          Center(
-            child: Padding(
-              // Same padding as the pin to be concentric
-              padding: const EdgeInsets.only(bottom: 40.0),
-              child: ScaleTransition(
-                scale: _glowAnimation,
-                child: FadeTransition(
-                  opacity: Tween(begin: 1.0, end: 0.0).animate(_glowAnimation),
+          // --- CUSTOM MARKER AT CENTER ---
+          Stack(
+            children: [
+              // Shadow (fixed at exact center/location point)
+              if (_showShadow)
+                Positioned(
+                  top: MediaQuery.of(context).size.height / 2 - 2.5,
+                  left: MediaQuery.of(context).size.width / 2 - 2.5,
                   child: Container(
-                    height: 80, // 2x the pin height
-                    width: 80,
+                    height: 5.0,
+                    width: 5.0,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      // Pulsing color
-                      color: AppStyle.primaryColor(context).withOpacity(0.4),
+                      color: Colors.black.withOpacity(0.3),
                     ),
                   ),
                 ),
+              // Marker image (animates down to land bottom/tip at center)
+              Positioned(
+                top:
+                    MediaQuery.of(context).size.height / 2 +
+                    _animation.value -
+                    64.9, 
+                left:
+                    MediaQuery.of(context).size.width / 2 -
+                    39.5, // 40 is half lottie width
+                child: Lottie.asset(
+                  "assets/lottie/kilipicker.json",
+                  height: 80,
+                  width: 80,
+                  repeat: false,
+                  controller: _lottieController,
+                  onLoaded: (composition) {
+                    _lottieController.duration = Duration(
+                      milliseconds: (composition.duration.inMilliseconds ~/ 1.5)
+                          .toInt(), // 1.5x speed; tune as needed (e.g., /2 for 2x)
+                    );
+                    _lottieController.forward();
+                  },
+                ),
               ),
-            ),
+            ],
           ),
-          // --- END GLOWING EFFECT ---
-
-          // --- THE CENTER PIN ---
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 40.0),
-              child: SvgPicture.asset(
-                "assets/icons/start_pin.svg", // Using your existing pin
-                height: 40,
-                color: AppStyle.primaryColor(context),
-              ),
-            ),
-          ),
+          // --- END CUSTOM MARKER ---
 
           // --- ADDED: SEARCH BAR ---
           Positioned(
@@ -505,9 +543,34 @@ class _LocationPickerScreenState
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (_isGeocoding)
+                  if (_isGeocoding && _oldSelectedPlace == null)
                     const Loading()
-                  else if (_selectedPlace != null) ...[
+                  else if (_isGeocoding && _oldSelectedPlace != null) ...[
+                    // Show old address in grey while loading new one
+                    Text(
+                      _oldSelectedPlace!.mainText,
+                      style: TextStyle(
+                        fontSize: AppStyle.appFontSizeLG,
+                        fontWeight: FontWeight.bold,
+                        color: AppStyle.textColoredFade(
+                          context,
+                        ).withOpacity(0.5),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      _oldSelectedPlace!.secondaryText,
+                      style: TextStyle(
+                        fontSize: AppStyle.appFontSize,
+                        color: AppStyle.textColoredFade(
+                          context,
+                        ).withOpacity(0.4),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ] else if (_selectedPlace != null) ...[
                     Text(
                       _selectedPlace!.mainText,
                       style: TextStyle(
@@ -556,7 +619,7 @@ class _LocationPickerScreenState
                               // Pop and return the selected 'Place' object
                               Navigator.pop(context, _selectedPlace);
                             },
-                      child: Text(widget.confirmButtonText.tr),
+                      child: Text(widget.confirmButtonText.tr, style: TextStyle(fontSize: AppStyle.appFontSize, fontWeight: FontWeight.w700),),
                     ),
                   ),
                 ],

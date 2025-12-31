@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -463,13 +464,10 @@ class _LocationSearchPageState extends State<LocationSearchPage> {
                           size: 20,
                           color: Colors.blue[400],
                         ),
-                      IconButton(
-                        icon: Icon(
-                          Icons.add,
-                          size: 20,
-                          color: Colors.grey[600],
-                        ),
-                        onPressed: _openMapPickerForPickup,
+                        if(_isPickupFocused)
+                      GestureDetector(
+                        onTap: _openMapPickerForPickup,
+                        child: SvgPicture.asset('assets/icons/grey_map.svg'),
                       ),
                     ],
                   ),
@@ -523,13 +521,12 @@ class _LocationSearchPageState extends State<LocationSearchPage> {
                             });
                           },
                         ),
-                      IconButton(
-                        icon: Icon(
-                          Icons.add,
-                          size: 20,
-                          color: Colors.grey[600],
+                      if (_isDestinationFocused)
+                      GestureDetector(
+                        onTap: _openMapPickerForDestination,
+                        child: SvgPicture.asset(
+                          'assets/icons/grey_map.svg',
                         ),
-                        onPressed: _openMapPickerForDestination,
                       ),
                     ],
                   ),

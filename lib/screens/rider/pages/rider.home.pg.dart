@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
@@ -11,6 +12,9 @@ import 'package:kiliride/screens/driver/screens/become_driver.scrn.dart';
 import 'package:kiliride/screens/rider/pages/location_search.pg.dart';
 import 'package:kiliride/screens/rider/screens/safety.scrn.dart';
 import 'package:kiliride/screens/rider/screens/my_rides.scrn.dart';
+import 'package:kiliride/services/auth.service.dart';
+import 'package:kiliride/services/db_service.dart';
+import 'package:kiliride/shared/funcs.main.ctrl.dart';
 import 'package:kiliride/shared/styles.shared.dart';
 
 class RiderHomePage extends StatefulWidget {
@@ -37,10 +41,45 @@ class _RiderHomePageState extends State<RiderHomePage> {
   String? _startLocation;
   String? _destinationLocation;
 
+  // Map style to grey out POI icons and labels
+  final String _mapStyle = '''[
+    {
+      "featureType": "poi",
+      "elementType": "labels.icon",
+      "stylers": [
+        {
+          "saturation": -100
+        },
+        {
+          "lightness": 50
+        }
+      ]
+    },
+    {
+      "featureType": "poi",
+      "elementType": "labels.text.fill",
+      "stylers": [
+        {
+          "color": "#9e9e9e"
+        }
+      ]
+    },
+    {
+      "featureType": "poi",
+      "elementType": "labels.text.stroke",
+      "stylers": [
+        {
+          "color": "#ffffff"
+        }
+      ]
+    }
+  ]''';
+
   @override
   void initState() {
     super.initState();
     _getCurrentLocation();
+    _checkAndRegisterNotification();
   }
 
   @override
@@ -48,6 +87,25 @@ class _RiderHomePageState extends State<RiderHomePage> {
     _vehicleAnimationTimer?.cancel();
     _mapController?.dispose();
     super.dispose();
+  }
+
+  Future<void> _checkAndRegisterNotification() async {
+    await AwesomeNotifications().dismissAllNotifications();
+    bool hasNotifToken = await _hasNotifToken();
+    if (!hasNotifToken) {
+      await Funcs.registerNotification();
+    }
+  }
+
+  Future<bool> _hasNotifToken() async {
+    //DO NOT DELETE THIS FUNCTION. KEEP FOR FUTURE USE.
+    // final uid = AuthService().currentUser?.uid;
+    // if (uid == null) {
+    //   return false;
+    // }
+
+    // return await DBService().userHasNotificationTokens(uid);
+    return false;
   }
 
   Future<void> _getCurrentLocation() async {
@@ -298,6 +356,7 @@ class _RiderHomePageState extends State<RiderHomePage> {
       body: Stack(
         children: [
           GoogleMap(
+            style: _mapStyle,
             initialCameraPosition: CameraPosition(
               target: _currentLocation,
               zoom: 14.0,
