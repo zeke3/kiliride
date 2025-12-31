@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kiliride/shared/styles.shared.dart';
+import 'package:lottie/lottie.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -47,26 +48,12 @@ class _SplashScreenState extends State<SplashScreen>
       backgroundColor: AppStyle.appColor(context),
       body: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color.fromRGBO(237, 28, 36, 1),
-              Color.fromRGBO(135, 16, 21, 1),
-            ],
+          image: DecorationImage(
+            image: AssetImage('assets/gifs/kiliride_intro.gif'),
+            fit: BoxFit.cover,
           ),
         ),
-        child: Center(
-          child: ScaleTransition(
-            scale: _scaleAnimation,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppStyle.appPadding + 2,
-              ),
-              child: Image.asset('assets/img/kiliride_logo.png'),
-            ),
-          ),
-        ),
+        // child: Lottie.asset('assets/lottie/kiliride_intro.json'),
       ),
     );
   }

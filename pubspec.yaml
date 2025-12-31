@@ -95,6 +95,7 @@ flutter:
     - assets/icons/dummy/
     - assets/icons/rides/
     - assets/lottie/
+    - assets/gifs/
     - assets/files/
     - .env
 
