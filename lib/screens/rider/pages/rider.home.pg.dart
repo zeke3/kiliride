@@ -8,6 +8,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:kiliride/components/custom_info_tile.dart';
 import 'package:kiliride/providers/providers.dart';
+import 'package:kiliride/routes/router.dart';
+import 'package:kiliride/screens/driver/driver.navigation.dart';
 import 'package:kiliride/screens/driver/screens/become_driver.scrn.dart';
 import 'package:kiliride/screens/rider/pages/location_search.pg.dart';
 import 'package:kiliride/screens/rider/screens/safety.scrn.dart';
@@ -764,6 +766,22 @@ class _RiderHomePageState extends State<RiderHomePage> {
                           // Navigate to about screen
                         },
                       ),
+
+                      // SINCE ITS FOR DEVELOPMENT DO NOT REMOVE THIS
+                      _buildDrawerMenuItem(
+                        icon: Icons.directions_car_outlined,
+                        title: 'Switch to Driver',
+                        onTap: () {
+                          Navigator.pop(context);
+                          // Navigate to driver navigation
+                          Get.offAll(
+                            ()=> DriverNavigation(),
+                            transition: Transition.zoom,
+                            duration: const Duration(milliseconds: 350),
+                            );
+                        },
+                      ),
+
                     ],
                   ),
                 ),

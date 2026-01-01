@@ -420,7 +420,6 @@ class _LocationSearchPageState extends State<LocationSearchPage> {
   }
 
   Widget? _buildDistanceText(Place place) {
-    print("PLACE LATITUDE: ${place.latitude}, LONGITUDE: ${place.longitude}");
     if (place.latitude == null || place.longitude == null) {
       return null;
     }

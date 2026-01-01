@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kiliride/shared/styles.shared.dart';
-import 'package:lottie/lottie.dart';
+import 'package:video_player/video_player.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -9,36 +9,30 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _scaleAnimation;
+class _SplashScreenState extends State<SplashScreen> {
+  late VideoPlayerController _videoController;
+  bool _isVideoInitialized = false;
 
   @override
   void initState() {
     super.initState();
 
-    // Initialize animation controller
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    );
-
-    // Create scale animation from 0.0 to 1.0
-    _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeOutBack, // Smooth bounce effect
-      ),
-    );
-
-    // Start the animation
-    _animationController.forward();
+    // Initialize video player with asset video
+    _videoController = VideoPlayerController.asset('assets/mp4/kiliride_intro.mp4')
+      ..initialize().then((_) {
+        setState(() {
+          _isVideoInitialized = true;
+        });
+        _videoController.play();
+        _videoController.setLooping(false); // Play only once
+      }).catchError((error) {
+        debugPrint('Error initializing video: $error');
+      });
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
+    _videoController.dispose();
     super.dispose();
   }
 
@@ -46,15 +40,20 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppStyle.appColor(context),
-      body: Container(
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/gifs/kiliride_intro.gif'),
-            fit: BoxFit.cover,
-          ),
-        ),
-        // child: Lottie.asset('assets/lottie/kiliride_intro.json'),
-      ),
+      body: _isVideoInitialized
+          ? SizedBox.expand(
+              child: FittedBox(
+                fit: BoxFit.cover,
+                child: SizedBox(
+                  width: _videoController.value.size.width,
+                  height: _videoController.value.size.height,
+                  child: VideoPlayer(_videoController),
+                ),
+              ),
+            )
+          : const Center(
+              child: CircularProgressIndicator(),
+            ),
     );
   }
 }

@@ -5,6 +5,7 @@ import 'package:kiliride/screens/authentication/otp_selection_method.scrn.dart';
 import 'package:kiliride/screens/authentication/otp_verification.scrn.dart';
 import 'package:kiliride/screens/authentication/password_reset_otp_verification.scrn.dart';
 import 'package:kiliride/screens/authentication/reset_password.scrn.dart';
+import 'package:kiliride/screens/driver/driver.navigation.dart';
 
 import 'package:kiliride/wrapper.dart';
 import 'package:flutter/material.dart';
@@ -31,6 +32,7 @@ class AppRouter {
 
   static const String salesNavigation = '/sales-navigation';
   static const String salesHome = '/sales-home';
+  static const String driverNavigation = '/driver-navigation';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -76,6 +78,8 @@ class AppRouter {
           ),
           settings: settings,
         );
+      case AppRouter.driverNavigation:
+        return MaterialPageRoute(builder: (context) => const DriverNavigation());  
       default:
         return MaterialPageRoute(builder: (context) => const Wrapper());
     }
